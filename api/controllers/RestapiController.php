@@ -68,6 +68,9 @@ class RestapiController extends Controller
             'get-tasks-with-cats' => [
                 'class' => 'api\controllers\restapi\GetTasksWithCats'
             ],
+            'get-tasks-with-answers' => [
+                'class' => 'api\controllers\restapi\GetTasksWithAnswers'
+            ],
             'save-task-cats' => [
                 'class' => 'api\controllers\restapi\SaveTaskCats'
             ]
@@ -86,6 +89,7 @@ class RestapiController extends Controller
             'cors' => [
                 'Origin' => [
                     'http://localhost:3000', //development
+                    'http://127.0.0.1:3000', //development
                     'http://localhost', //development
                 ],
                 'Access-Control-Request-Method' => ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD', 'OPTIONS'],
