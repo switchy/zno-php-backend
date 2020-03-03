@@ -52,11 +52,11 @@ class ImportController extends Controller
 
             $dbData = Json::decode(file_get_contents($jsonFile));
             $tableName = 'answers_on_task';
-            VarDumper::dump($dbData);
+            //if (YII_DEBUG) VarDumper::dump($dbData);
             foreach($dbData['items'] as $num => $answ) {
                 $taskId = strtr('i{y}{s}{n}', [
-                    '{y}' => $dbData['year'],
-                    '{s}' => $dbData['minTitle'],
+                    '{y}' => trim($dbData['year']),
+                    '{s}' => trim(mb_strtolower($dbData['minTitle'])),
                     '{n}' => $num,
                 ]);
                 Yii::$app->db->createCommand()
