@@ -5,6 +5,7 @@ use Yii;
 use yii\console\Controller;
 use yii\console\ExitCode;
 use yii\helpers\VarDumper;
+use yii\helpers\Json;
 
 class ImportController extends Controller
 {
@@ -14,7 +15,7 @@ class ImportController extends Controller
     {
         $tableName = 'answers_on_task';
         if (Yii::$app->db->getTableSchema($tableName, true) === null) {
-            Yii::$app->db->createCommand("
+            Yii::$app->db->createCommand(" _import
                 create table {$tableName} (
                     id_task VARCHAR(20) NOT NULL,
                     idx INTEGER NULL,
@@ -28,6 +29,52 @@ class ImportController extends Controller
     }
 
     public function actionAnswers()
+    {
+        $this->_importAnswersCSV();
+        $this->_importAnswersJSON();
+
+        return ExitCode::OK;
+    }
+
+    private function _importAnswersJSON()
+    {
+        $files = \yii\helpers\FileHelper::findFiles(Yii::getAlias(self::FS_SPOOL_ALIAS), [
+            'only' => ['answers*.json'],
+            'recursive' => false
+        ]);
+
+        foreach($files as $jsonFile) {
+            if (!file_exists($jsonFile)) {
+                Yii::error($msg = sprintf('JSON file %s is not exists!', $jsonFile), __METHOD__);
+                $this->stderr($msg);
+                return ExitCode::DATAERR;
+            }
+
+            $dbData = Json::decode(file_get_contents($jsonFile));
+            $tableName = 'answers_on_task';
+            VarDumper::dump($dbData);
+            foreach($dbData['items'] as $num => $answ) {
+                $taskId = strtr('i{y}{s}{n}', [
+                    '{y}' => $dbData['year'],
+                    '{s}' => $dbData['minTitle'],
+                    '{n}' => $num,
+                ]);
+                Yii::$app->db->createCommand()
+                    ->delete($tableName, ['id_task' => $taskId])
+                    ->execute();
+                $rows = [];
+                if (count($answ) == 1) {
+                    //Прості відповіді
+                    $rows[] = [$taskId, null, $answ[0]];
+                }
+                Yii::$app->db->createCommand()
+                    ->batchInsert($tableName, ['id_task', 'idx', 'answer'], $rows)
+                    ->execute();
+            }
+        }
+    }
+
+    private function _importAnswersCSV()
     {
         $files = \yii\helpers\FileHelper::findFiles(Yii::getAlias(self::FS_SPOOL_ALIAS), [
             'only' => ['answers-*.csv'],
@@ -58,7 +105,7 @@ class ImportController extends Controller
                     $yrCur  = $csvData[0];
                     $scCur = mb_strtolower($csvData[1]);
                     $qnCur = $csvData[2];
-                    
+
                 } else {
                     if (!$yrPrev && strlen($csvData[0])) {
                         $yrCur = $csvData[0];
@@ -99,8 +146,6 @@ class ImportController extends Controller
             }
             fclose($fCsv);
         }
-
-        return ExitCode::OK;
     }
 }
 
